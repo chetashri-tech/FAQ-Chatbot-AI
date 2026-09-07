@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShopHelp &mdash; AI FAQ Chatbot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F1E8;
+    --panel:#FFFFFF;
+    --ink:#241C1A;
+    --ink-soft:#7A6E64;
+    --plum:#5C2A4D;
+    --plum-deep:#3E1B35;
+    --mustard:#D9A441;
+    --line:#E4DACB;
+    --bot-bubble:#F0E9DC;
+    --user-bubble:#5C2A4D;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:44px 18px 70px;
+  }
+  .mark{
+    font-family:'Fraunces', serif;
+    font-size:14px;
+    color:var(--plum-deep);
+    letter-spacing:0.02em;
+    margin-bottom:6px;
+  }
+  .mark span{color:var(--mustard); font-style:italic;}
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:clamp(30px,5vw,44px);
+    margin:0 0 8px;
+    text-align:center;
+    line-height:1.08;
+  }
+  .sub{
+    color:var(--ink-soft);
+    font-size:15px;
+    margin:0 0 34px;
+    text-align:center;
+    max-width:460px;
+  }
+  .shell{
+    width:100%;
+    max-width:680px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .shell-head{
+    background:var(--plum-deep);
+    color:#fff;
+    padding:16px 22px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .avatar{
+    width:34px; height:34px;
+    border-radius:50%;
+    background:var(--mustard);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    color:var(--plum-deep);
+    font-size:15px;
+  }
+  .shell-head .who{ font-size:14px; }
+  .shell-head .who b{ display:block; font-size:15px; font-weight:600; }
+  .shell-head .status{ font-size:12px; color:#D8C9D1; }
+
+  .chat-window{
+    height:420px;
+    overflow-y:auto;
+    padding:22px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    background:repeating-linear-gradient(180deg, transparent, transparent 100%);
+  }
+  .msg{
+    max-width:78%;
+    padding:11px 15px;
+    font-size:14.5px;
+    line-height:1.5;
+    border-radius:10px;
+  }
+  .msg.bot{
+    background:var(--bot-bubble);
+    color:var(--ink);
+    align-self:flex-start;
+    border-bottom-left-radius:3px;
+  }
+  .msg.user{
+    background:var(--user-bubble);
+    color:#fff;
+    align-self:flex-end;
+    border-bottom-right-radius:3px;
+  }
+  .msg.bot .tag{
+    display:block;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-soft);
+    margin-bottom:3px;
+  }
+  .suggestions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:0 22px 16px;
+  }
+  .chip{
+    font-size:12.5px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    color:var(--plum-deep);
+    padding:6px 12px;
+    border-radius:20px;
+    cursor:pointer;
+  }
+  .chip:hover{background:var(--bot-bubble);}
+  .input-row{
+    display:flex;
+    gap:10px;
+    padding:16px 20px;
+    border-top:1px solid var(--line);
+  }
+  input[type=text]{
+    flex:1;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14.5px;
+    padding:11px 14px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  input[type=text]:focus{outline:2px solid var(--plum); outline-offset:1px;}
+  button.send{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    color:#fff;
+    background:var(--plum-deep);
+    border:none;
+    padding:0 22px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  button.send:hover{background:var(--plum);}
+  .match-note{
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:4px;
+  }
+  @media (max-width:520px){
+    .msg{max-width:88%;}
+    .chat-window{height:380px;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="mark">ShopHelp<span>— AI FAQ Assistant</span></div>
+  <h1>Ask us anything about your order</h1>
+  <p class="sub">This assistant matches your question to the closest FAQ using cosine similarity over your store's question bank.</p>
+
+  <div class="shell">
+    <div class="shell-head">
+      <div class="avatar">S</div>
+      <div class="who">
+        <b>ShopHelp Assistant</b>
+        <span class="status">Matches your question to our FAQs</span>
+      </div>
+    </div>
+
+    <div class="chat-window" id="chatWindow"></div>
+
+    <div class="suggestions" id="suggestions"></div>
+
+    <div class="input-row">
+      <input type="text" id="userInput" placeholder="Type your question… e.g. Where is my order?" autocomplete="off">
+      <button class="send" id="sendBtn">Send</button>
+    </div>
+  </div>
+
+<script>
+  // ---- FAQ knowledge base for an online shopping store ----
+  const FAQS = [
+    { q: "How can I track my order?", a: "Once your order ships, you'll get a tracking link by email and SMS. You can also check order status anytime under 'My Orders' in your account." },
+    { q: "What is your return policy?", a: "Most items can be returned within 7 days of delivery, unused and in original packaging. Some categories like innerwear and perishables aren't eligible for return." },
+    { q: "How long does a refund take?", a: "Refunds are processed within 5-7 business days after we receive the returned item, and usually reflect in your account 2-3 days after that." },
+    { q: "What payment methods do you accept?", a: "We accept credit/debit cards, UPI, net banking, popular wallets, and cash on delivery for eligible pin codes." },
+    { q: "Can I cancel my order after placing it?", a: "Yes, you can cancel an order for free as long as it hasn't been shipped yet. Go to 'My Orders' and select Cancel." },
+    { q: "Can I change my delivery address after ordering?", a: "You can update the delivery address only before the order is shipped. Once shipped, the address can't be changed for that order." },
+    { q: "Do you offer discount codes or coupons?", a: "Yes, active coupon codes are shown at checkout, and you can also check the Offers page for current deals." },
+    { q: "An item I want is out of stock, what can I do?", a: "You can click 'Notify Me' on the product page and we'll email you the moment it's back in stock." },
+    { q: "I can't log into my account, what should I do?", a: "Try resetting your password using 'Forgot Password' on the login page. If you still can't log in, contact support with your registered email." },
+    { q: "How do I contact customer support?", a: "You can reach our support team via the Help Center chat, or email support@shophelp.example, available 9 AM to 9 PM daily." },
+    { q: "Do you ship internationally?", a: "Currently we only ship within the country. International shipping isn't available yet, but it's on our roadmap." },
+    { q: "Can I exchange an item for a different size?", a: "Yes, size exchanges are free within 7 days of delivery, subject to stock availability of the new size." },
+    { q: "What if my item arrives damaged or wrong?", a: "Sorry about that! Report it within 48 hours of delivery through 'My Orders > Report Issue' and we'll arrange a free replacement or refund." },
+    { q: "Will I get an invoice or GST bill?", a: "Yes, a tax invoice is generated automatically and available for download from 'My Orders' once your order is confirmed." },
+    { q: "How long does delivery usually take?", a: "Standard delivery takes 3-5 business days depending on your location; express delivery (1-2 days) is available in select cities." }
+  ];
+
+  // ---- Simple NLP: tokenize + TF-IDF vectors + cosine similarity ----
+  const STOPWORDS = new Set(["a","an","the","is","are","was","were","do","does","did","i","my","me","you","your","can","will","how","what","of","for","to","in","on","and","or","it","this","that","be","have","has","if","after","before"]);
+
+  function tokenize(text) {
+    return text.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter(t => t && !STOPWORDS.has(t));
+  }
+
+  const corpusTokens = FAQS.map(f => tokenize(f.q));
+  const vocab = Array.from(new Set(corpusTokens.flat()));
+
+  // IDF across the FAQ corpus
+  const idf = {};
+  vocab.forEach(term => {
+    const df = corpusTokens.filter(tokens => tokens.includes(term)).length;
+    idf[term] = Math.log((1 + corpusTokens.length) / (1 + df)) + 1;
+  });
+
+  function vectorize(tokens) {
+    const tf = {};
+    tokens.forEach(t => tf[t] = (tf[t] || 0) + 1);
+    return vocab.map(term => (tf[term] || 0) * (idf[term] || 0));
+  }
+
+  const faqVectors = corpusTokens.map(vectorize);
+
+  function cosineSim(a, b) {
+    let dot = 0, magA = 0, magB = 0;
+    for (let i = 0; i < a.length; i++) {
+      dot += a[i] * b[i];
+      magA += a[i] * a[i];
+      magB += b[i] * b[i];
+    }
+    if (magA === 0 || magB === 0) return 0;
+    return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+  }
+
+  function bestMatch(query) {
+    const qVec = vectorize(tokenize(query));
+    let best = { index: -1, score: 0 };
+    faqVectors.forEach((vec, i) => {
+      const score = cosineSim(qVec, vec);
+      if (score > best.score) best = { index: i, score };
+    });
+    return best;
+  }
+
+  // ---- Chat UI wiring ----
+  const chatWindow = document.getElementById('chatWindow');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const suggestionsEl = document.getElementById('suggestions');
+
+  function addMessage(text, sender, tag) {
+    const div = document.createElement('div');
+    div.className = `msg ${sender}`;
+    if (tag) {
+      const tagEl = document.createElement('span');
+      tagEl.className = 'tag';
+      tagEl.textContent = tag;
+      div.appendChild(tagEl);
+    }
+    const body = document.createElement('span');
+    body.textContent = text;
+    div.appendChild(body);
+    chatWindow.appendChild(div);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+
+  function respond(query) {
+    const match = bestMatch(query);
+    if (match.index === -1 || match.score < 0.15) {
+      addMessage("I couldn't find a close match for that in our FAQs. Try rephrasing, or contact support@shophelp.example for help.", 'bot', 'ShopHelp');
+      return;
+    }
+    const faq = FAQS[match.index];
+    const confidence = Math.round(match.score * 100);
+    addMessage(faq.a, 'bot', `ShopHelp · matched "${faq.q}" (${confidence}% match)`);
+  }
+
+  function handleSend() {
+    const text = userInput.value.trim();
+    if (!text) return;
+    addMessage(text, 'user');
+    userInput.value = '';
+    setTimeout(() => respond(text), 250);
+  }
+
+  sendBtn.addEventListener('click', handleSend);
+  userInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
+
+  // Suggestion chips (a few sample questions)
+  const sampleQs = ["Where is my order?", "How do I return an item?", "What payment methods work?", "Can I cancel my order?"];
+  sampleQs.forEach(q => {
+    const chip = document.createElement('button');
+    chip.className = 'chip';
+    chip.textContent = q;
+    chip.addEventListener('click', () => {
+      userInput.value = q;
+      handleSend();
+    });
+    suggestionsEl.appendChild(chip);
+  });
+
+  // Greeting
+  addMessage("Hi! I'm ShopHelp, your FAQ assistant. Ask me about orders, returns, payments, or delivery — try one of the suggestions below to start.", 'bot', 'ShopHelp');
+</script>
+</body>
+</html>
